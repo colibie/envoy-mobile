@@ -25,7 +25,11 @@ public:
   EngineBuilder& addStatsFlushSeconds(int stats_flush_seconds);
   EngineBuilder& setAppVersion(const std::string& app_version);
   EngineBuilder& setAppId(const std::string& app_id);
+  EngineBuilder& setDeviceOs(const std::string& app_id);
   EngineBuilder& addVirtualClusters(const std::string& virtual_clusters);
+
+  // this is separated from build() for the sake of testability
+  std::string generateConfigStr();
 
   EngineSharedPtr build();
 
@@ -48,6 +52,7 @@ private:
   int stats_flush_seconds_ = 60;
   std::string app_version_ = "unspecified";
   std::string app_id_ = "unspecified";
+  std::string device_os_ = "unspecified";
   std::string virtual_clusters_ = "[]";
   int stream_idle_timeout_seconds_ = 15;
 

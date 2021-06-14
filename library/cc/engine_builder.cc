@@ -55,17 +55,22 @@ EngineBuilder& EngineBuilder::setAppId(const std::string& app_id) {
   return *this;
 }
 
+EngineBuilder& EngineBuilder::setDeviceOs(const std::string& device_os) {
+  this->device_os_ = device_os;
+  return *this;
+}
+
 EngineBuilder& EngineBuilder::addVirtualClusters(const std::string& virtual_clusters) {
   this->virtual_clusters_ = virtual_clusters;
   return *this;
 }
 
-EngineSharedPtr EngineBuilder::build() {
+std::string EngineBuilder::generateConfigStr() {
   std::vector<std::pair<std::string, std::string>> replacements{
       {"{{ app_id }}", this->app_id_},
       {"{{ app_version }}", this->app_version_},
       {"{{ connect_timeout_seconds }}", std::to_string(this->connect_timeout_seconds_)},
-      {"{{ device_os }}", "python"},
+      {"{{ device_os }}", this->device_os_},
       {"{{ dns_failure_refresh_rate_seconds_base }}",
        std::to_string(this->dns_failure_refresh_seconds_base_)},
       {"{{ dns_failure_refresh_rate_seconds_max }}",
@@ -100,6 +105,11 @@ EngineSharedPtr EngineBuilder::build() {
     throw std::runtime_error("could not resolve all template keys in config:\n" + config_str);
   }
 
+  return config_str;
+}
+
+EngineSharedPtr EngineBuilder::build() {
+  auto config_str = this->generateConfigStr();
   envoy_logger null_logger{
       .log = nullptr,
       .release = envoy_noop_const_release,
