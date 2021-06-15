@@ -12,10 +12,8 @@ namespace {
 using namespace Platform;
 
 TEST(TestConfig, ConfigIsApplied) {
-  absl::Notification engine_running;
   auto engine_builder = EngineBuilder();
-  engine_builder.addLogLevel(LogLevel::debug)
-      .addStatsDomain("asdf.fake.website")
+  engine_builder.addStatsDomain("asdf.fake.website")
       .addConnectTimeoutSeconds(123)
       .addDnsRefreshSeconds(456)
       .addDnsFailureRefreshSeconds(789, 987)
@@ -34,10 +32,21 @@ TEST(TestConfig, ConfigIsApplied) {
       "- &dns_fail_max_interval 987s",
       "- &stats_flush_interval 654s",
       "- &virtual_clusters [virtual-clusters]",
-      "- &metadata { device_os: probably-ubuntu-on-CI, app_version: 1.2.3, app_id: 1234-1234-1234 }",
+      ("- &metadata { device_os: probably-ubuntu-on-CI, "
+       "app_version: 1.2.3, app_id: 1234-1234-1234 }"),
   };
   for (const auto& string : must_contain) {
     ASSERT_NE(config_str.find(string), std::string::npos) << "'" << string << "' not found";
+  }
+}
+
+TEST(TestConfig, RemainingTemplatesThrows) {
+  auto engine_builder = EngineBuilder("{{ template that i wont fill }}");
+  try {
+    engine_builder.generateConfigStr();
+    FAIL() << "Expected std::runtime_error";
+  } catch (std::runtime_error& err) {
+    EXPECT_EQ(err.what(), std::string("could not resolve all template keys in config"));
   }
 }
 

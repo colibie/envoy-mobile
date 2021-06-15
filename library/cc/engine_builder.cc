@@ -75,13 +75,9 @@ std::string EngineBuilder::generateConfigStr() {
       {"dns_fail_max_interval", fmt::format("{}s", this->dns_failure_refresh_seconds_max_)},
       {"dns_refresh_rate", fmt::format("{}s", this->dns_refresh_seconds_)},
       {
-        "metadata",
-        fmt::format(
-          "{{ device_os: {}, app_version: {}, app_id: {} }}",
-          this->device_os_,
-          this->app_version_,
-          this->app_id_
-        ),
+          "metadata",
+          fmt::format("{{ device_os: {}, app_version: {}, app_id: {} }}", this->device_os_,
+                      this->app_version_, this->app_id_),
       },
       {"stats_domain", this->stats_domain_},
       {"stats_flush_interval", fmt::format("{}s", this->stats_flush_seconds_)},
@@ -99,7 +95,7 @@ std::string EngineBuilder::generateConfigStr() {
 
   auto config_str = config_builder.str();
   if (config_str.find("{{") != std::string::npos) {
-    throw std::runtime_error("could not resolve all template keys in config:\n" + config_str);
+    throw std::runtime_error("could not resolve all template keys in config");
   }
   return config_str;
 }
