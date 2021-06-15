@@ -20,23 +20,21 @@ TEST(TestConfig, ConfigIsApplied) {
       .addDnsRefreshSeconds(456)
       .addDnsFailureRefreshSeconds(789, 987)
       .addStatsFlushSeconds(654)
-      .addVirtualClusters("virtual-clusters")
+      .addVirtualClusters("[virtual-clusters]")
       .setAppVersion("1.2.3")
       .setAppId("1234-1234-1234")
       .setDeviceOs("probably-ubuntu-on-CI");
   auto config_str = engine_builder.generateConfigStr();
 
   std::vector<std::string> must_contain = {
-      "socket_address: {address: asdf.fake.website, port_value: 443}",
-      "connect_timeout: 123s",
-      "dns_refresh_rate: 456s",
-      "base_interval: 789s",
-      "max_interval: 987s",
-      "stats_flush_interval: 654s",
-      "virtual_clusters: virtual-clusters",
-      "app_version : 1.2.3",
-      "app_id : 1234-1234-1234",
-      "os: probably-ubuntu-on-CI",
+      "- &stats_domain asdf.fake.website",
+      "- &connect_timeout 123s",
+      "- &dns_refresh_rate 456s",
+      "- &dns_fail_base_interval 789s",
+      "- &dns_fail_max_interval 987s",
+      "- &stats_flush_interval 654s",
+      "- &virtual_clusters [virtual-clusters]",
+      "- &metadata { device_os: probably-ubuntu-on-CI, app_version: 1.2.3, app_id: 1234-1234-1234 }",
   };
   for (const auto& string : must_contain) {
     ASSERT_NE(config_str.find(string), std::string::npos) << "'" << string << "' not found";

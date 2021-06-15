@@ -23,10 +23,10 @@ public:
   EngineBuilder& addDnsRefreshSeconds(int dns_refresh_seconds);
   EngineBuilder& addDnsFailureRefreshSeconds(int base, int max);
   EngineBuilder& addStatsFlushSeconds(int stats_flush_seconds);
+  EngineBuilder& addVirtualClusters(const std::string& virtual_clusters);
   EngineBuilder& setAppVersion(const std::string& app_version);
   EngineBuilder& setAppId(const std::string& app_id);
   EngineBuilder& setDeviceOs(const std::string& app_id);
-  EngineBuilder& addVirtualClusters(const std::string& virtual_clusters);
 
   // this is separated from build() for the sake of testability
   std::string generateConfigStr();
