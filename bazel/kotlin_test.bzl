@@ -102,7 +102,7 @@ def envoy_mobile_android_test(name, srcs, deps = [], native_deps = []):
         custom_package = "io.envoyproxy.envoymobile.tests",
         test_class = "io.envoyproxy.envoymobile.bazel.EnvoyMobileTestSuite",
         jvm_flags = [
-            "-Djava.library.path=library/common/jni",
+            "-Djava.library.path=library/common/jni:test/common/jni",
             "-Denvoy_jni_library_name={}".format(lib_name),
         ],
     )

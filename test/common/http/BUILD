@@ -21,7 +21,17 @@ envoy_cc_test(
         "@envoy//test/mocks/http:api_listener_mocks",
         "@envoy//test/mocks/local_info:local_info_mocks",
         "@envoy//test/mocks/upstream:upstream_mocks",
+        "@envoy//test/integration:fake_upstream_lib",
+        "@envoy_api//envoy/extensions/transport_sockets/quic/v3:pkg_cc_proto",
+        "@envoy//source/common/quic:active_quic_listener_lib",
+        "@envoy//source/common/quic:quic_factory_lib",
+        "@envoy//source/common/quic:quic_stat_names_lib",
+
     ],
+    data = [
+        "@envoy//test/config/integration/certs",
+    ],
+
 )
 
 envoy_cc_test(

@@ -20,6 +20,12 @@
 #include "library/common/http/header_utility.h"
 #include "library/common/types/c_types.h"
 
+#include "absl/strings/str_format.h"
+#include "envoy/extensions/transport_sockets/quic/v3/quic_transport.pb.h"
+#include "test/mocks/server/transport_socket_factory_context.h"
+#include "test/test_common/environment.h"
+#include "test/integration/fake_upstream.h"
+
 using testing::_;
 using testing::NiceMock;
 using testing::Return;
@@ -1052,6 +1058,64 @@ TEST_P(ExplicitFlowControlTest, ResumeWithDataAndTrailers) {
   ASSERT_EQ(cc_.on_trailers_calls, 1);
   ASSERT_EQ(cc_.on_complete_calls, 1);
 }
+
+
+Network::TransportSocketFactoryPtr createUpstreamTlsContext(testing::NiceMock<Server::Configuration::MockTransportSocketFactoryContext>& factory_context_) {
+  envoy::extensions::transport_sockets::tls::v3::DownstreamTlsContext tls_context;
+  const std::string yaml = absl::StrFormat(
+      R"EOF(
+common_tls_context:
+  tls_certificates:
+  - certificate_chain: { filename: "%s" }
+    private_key: { filename: "%s" }
+  validation_context:
+    trusted_ca: { filename: "%s" }
+)EOF",
+      TestEnvironment::runfilesPath("test/config/integration/certs/upstreamcert.pem"),
+      TestEnvironment::runfilesPath("test/config/integration/certs/upstreamkey.pem"),
+      TestEnvironment::runfilesPath("test/config/integration/certs/cacert.pem"));
+  TestUtility::loadFromYaml(yaml, tls_context);
+
+
+  envoy::extensions::transport_sockets::quic::v3::QuicDownstreamTransport quic_config;
+  quic_config.mutable_downstream_tls_context()->MergeFrom(tls_context);
+
+  std::vector<std::string> server_names;
+  auto& config_factory = Config::Utility::getAndCheckFactoryByName<
+      Server::Configuration::DownstreamTransportSocketConfigFactory>(
+          "envoy.transport_sockets.quic");
+  return config_factory.createTransportSocketFactory(quic_config, factory_context_, server_names);
+}
+
+TEST(CreateServer, BasicServer) {
+  testing::NiceMock<Server::Configuration::MockTransportSocketFactoryContext> factory_context_;
+  Stats::IsolatedStoreImpl stats_store_;
+  Event::GlobalTimeSystem time_system_;
+  Api::ApiPtr api_(Api::createApiForTest(stats_store_, time_system_));
+
+  ON_CALL(factory_context_, api()).WillByDefault(testing::ReturnRef(*api_));
+  ON_CALL(factory_context_, scope()).WillByDefault(testing::ReturnRef(stats_store_));
+
+  FakeUpstreamConfig upstream_config_{time_system_};
+  upstream_config_.upstream_protocol_ = Http::CodecType::HTTP3;
+  upstream_config_.udp_fake_upstream_ = FakeUpstreamConfig::UdpConfig();
+
+  Network::TransportSocketFactoryPtr factory = createUpstreamTlsContext(factory_context_);
+  auto version_ = Network::Address::IpVersion::v6;
+
+  int port = 0;  // let the kernel pick a port that is not in use (avoids test races)
+  std::unique_ptr<FakeUpstream> upstream = std::make_unique<FakeUpstream>(std::move(factory), port, version_, upstream_config_);
+
+  // see what port was selected.
+  std::cerr << "Upstream now listening on " << upstream->localAddress()->ip()->port();
+
+  sleep(3);
+  std::cerr << "shutting down";
+  upstream.reset();
+  FAIL() << "this way blaze will give you a test log";
+}
+
+
 
 } // namespace Http
 } // namespace Envoy

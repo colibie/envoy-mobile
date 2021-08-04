@@ -19,6 +19,7 @@ public final class UrlUtils {
    * Returns the root of the test data directory.
    */
   public static String getIsolatedTestRoot() {
+
     try (StrictModeContext ignored = StrictModeContext.allowDiskReads()) {
       return PathUtils.getExternalStorageDirectory() + "/chromium_tests_root";
     }
