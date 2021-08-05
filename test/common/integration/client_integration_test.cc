@@ -19,15 +19,36 @@ using testing::ReturnRef;
 namespace Envoy {
 namespace {
 
+// Based on Http::Utility::toRequestHeaders() but only used for these tests.
+Http::ResponseHeaderMapPtr toResponseHeaders(envoy_headers headers) {
+  std::unique_ptr<Http::ResponseHeaderMapImpl> transformed_headers =
+      Http::ResponseHeaderMapImpl::create();
+  transformed_headers->setFormatter(
+      std::make_unique<
+          Extensions::Http::HeaderFormatters::PreserveCase::PreserveCaseHeaderFormatter>());
+  Http::Utility::toEnvoyHeaders(*transformed_headers, headers);
+  return transformed_headers;
+}
+
+typedef struct {
+  uint32_t on_headers_calls;
+  uint32_t on_data_calls;
+  uint32_t on_complete_calls;
+  uint32_t on_error_calls;
+  uint32_t on_cancel_calls;
+  std::string status;
+  ConditionalInitializer* terminal_callback;
+} callbacks_called;
 
 // TODO(junr03): move this to derive from the ApiListenerIntegrationTest after moving that class
 // into a test lib.
 class ClientIntegrationTest : public BaseIntegrationTest,
                               public testing::TestWithParam<Network::Address::IpVersion> {
-public:
+ public:
   ClientIntegrationTest() : BaseIntegrationTest(GetParam(), bootstrap_config()) {
     use_lds_ = false;
     autonomous_upstream_ = true;
+    defer_listener_finalization_ = true;
   }
 
   void SetUp() override {
@@ -81,6 +102,44 @@ public:
       filters:
     )EOF";
   }
+
+  static std::string api_listener_config() {
+    return R"EOF(
+name: api_listener
+address:
+  socket_address:
+    address: 127.0.0.1
+    port_value: 1
+api_listener:
+  api_listener:
+    "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+    stat_prefix: hcm
+    route_config:
+      virtual_hosts:
+        name: integration
+        routes:
+          route:
+            cluster: cluster_0
+          match:
+            prefix: "/"
+        domains: "*"
+      name: route_config_0
+    http_filters:
+      - name: envoy.filters.http.local_error
+        typed_config:
+          "@type": type.googleapis.com/envoymobile.extensions.filters.http.local_error.LocalError
+      - name: envoy.router
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+      )EOF";
+  }
+
+  std::atomic<envoy_network_t> preferred_network_{ENVOY_NET_GENERIC};
+  Event::ProvisionalDispatcherPtr dispatcher_ = std::make_unique<Event::ProvisionalDispatcher>();
+  Http::ClientPtr http_client_{};
+  envoy_http_callbacks bridge_callbacks_;
+  ConditionalInitializer terminal_callback_;
+  callbacks_called cc_ = {0, 0, 0, 0, 0, "", &terminal_callback_};
 };
 
 INSTANTIATE_TEST_SUITE_P(IpVersions, ClientIntegrationTest,
@@ -234,9 +293,9 @@ TEST_P(ClientIntegrationTest, CaseSensitive) {
   config_helper_.addConfigModifier([](envoy::config::bootstrap::v3::Bootstrap& bootstrap) {
     ConfigHelper::HttpProtocolOptions protocol_options;
     auto typed_extension_config = protocol_options.mutable_explicit_http_config()
-                                      ->mutable_http_protocol_options()
-                                      ->mutable_header_key_format()
-                                      ->mutable_stateful_formatter();
+        ->mutable_http_protocol_options()
+        ->mutable_header_key_format()
+        ->mutable_stateful_formatter();
     typed_extension_config->set_name("preserve_case");
     typed_extension_config->mutable_typed_config()->set_type_url(
         "type.googleapis.com/"
