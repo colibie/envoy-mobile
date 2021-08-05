@@ -21,6 +21,7 @@ envoy_cc_test(
     ],
 )
 
+# ignore, used this test that the server java file works standalone
 envoy_cc_test(
     name = "quic_s",
     srcs = ["quic_s.cc"],
@@ -41,6 +42,7 @@ envoy_cc_test(
     ],
 )
 
+# interface libs for jni implementation
 envoy_cc_test_library(
     name = "quic_test_server_interface_lib",
     repository = "@envoy",

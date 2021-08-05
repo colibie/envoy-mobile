@@ -11,7 +11,6 @@ envoy_cc_library(
     srcs = [
         "jni_utility.cc",
         "jni_version.cc",
-        #        "@local_jdk//:jni_header",
     ],
     hdrs = [
         "jni_support.h",
@@ -20,7 +19,6 @@ envoy_cc_library(
     ],
     repository = "@envoy",
     deps = [
-        #        "//bazel:jni",
         "//library/common/types:c_types_lib",
         "@envoy//source/common/common:assert_lib",
     ],
