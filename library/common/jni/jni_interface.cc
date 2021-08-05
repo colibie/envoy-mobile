@@ -702,7 +702,7 @@ extern "C" JNIEXPORT jlong JNICALL Java_io_envoyproxy_envoymobile_engine_JniLibr
 }
 
 extern "C" JNIEXPORT jint JNICALL Java_io_envoyproxy_envoymobile_engine_JniLibrary_startStream(
-    JNIEnv* env, jclass, jlong stream_handle, jobject j_context) {
+    JNIEnv* env, jclass, jlong stream_handle, jobject j_context, jboolean explicit_flow_control) {
 
   jclass jcls_JvmCallbackContext = env->GetObjectClass(j_context);
 
@@ -716,8 +716,8 @@ extern "C" JNIEXPORT jint JNICALL Java_io_envoyproxy_envoymobile_engine_JniLibra
                                            jvm_on_complete,
                                            jvm_on_cancel,
                                            retained_context};
-  envoy_status_t result =
-      start_stream(static_cast<envoy_stream_t>(stream_handle), native_callbacks);
+  envoy_status_t result = start_stream(static_cast<envoy_stream_t>(stream_handle), native_callbacks,
+                                       explicit_flow_control);
   if (result != ENVOY_SUCCESS) {
     env->DeleteGlobalRef(retained_context); // No callbacks are fired and we need to release
   }
@@ -800,6 +800,12 @@ Java_io_envoyproxy_envoymobile_engine_EnvoyHTTPFilterCallbacksImpl_callReleaseCa
 
 // EnvoyHTTPStream
 
+extern "C" JNIEXPORT jint JNICALL Java_io_envoyproxy_envoymobile_engine_JniLibrary_readData(
+    JNIEnv* env, jclass, jlong stream_handle, jlong byte_count) {
+
+  return read_data(static_cast<envoy_stream_t>(stream_handle), byte_count);
+}
+
 // Note: JLjava_nio_ByteBuffer_2Z is the mangled signature of the java method.
 // https://docs.oracle.com/javase/7/docs/technotes/guides/jni/spec/design.html
 extern "C" JNIEXPORT jint JNICALL
@@ -864,5 +870,21 @@ Java_io_envoyproxy_envoymobile_engine_JniLibrary_registerStringAccessor(JNIEnv* 
   envoy_status_t result =
       register_platform_api(env->GetStringUTFChars(accessor_name, nullptr), string_accessor);
   env->DeleteLocalRef(jcls_JvmStringAccessorContext);
+  return result;
+}
+
+// EnvoyEventTracker
+
+extern "C" JNIEXPORT jint JNICALL
+Java_io_envoyproxy_envoymobile_engine_JniLibrary_registerEventTracker(JNIEnv* env, jclass) {
+  // TODO(Augustyniak): The event_tracker leaks, but it's tied to the life of the engine.
+  // This will need to be updated for https://github.com/lyft/envoy-mobile/issues/332.
+  envoy_event_tracker* event_tracker =
+      (envoy_event_tracker*)safe_malloc(sizeof(envoy_event_tracker));
+  // TODO(Augustyniak): Allow for the registration of a "real" (no no-op) event tracker.
+  event_tracker->track = nullptr;
+  event_tracker->context = nullptr;
+
+  envoy_status_t result = register_platform_api(envoy_event_tracker_api_name, event_tracker);
   return result;
 }

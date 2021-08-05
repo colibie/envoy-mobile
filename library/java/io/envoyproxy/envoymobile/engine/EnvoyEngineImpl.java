@@ -32,12 +32,13 @@ public class EnvoyEngineImpl implements EnvoyEngine {
    * Creates a new stream with the provided callbacks.
    *
    * @param callbacks The callbacks for the stream.
+   * @param explicitFlowControl Whether explicit flow control will be enabled for this stream.
    * @return A stream that may be used for sending data.
    */
   @Override
-  public EnvoyHTTPStream startStream(EnvoyHTTPCallbacks callbacks) {
+  public EnvoyHTTPStream startStream(EnvoyHTTPCallbacks callbacks, boolean explicitFlowControl) {
     long streamHandle = JniLibrary.initStream(engineHandle);
-    EnvoyHTTPStream stream = new EnvoyHTTPStream(streamHandle, callbacks);
+    EnvoyHTTPStream stream = new EnvoyHTTPStream(streamHandle, callbacks, explicitFlowControl);
     stream.start();
     return stream;
   }
@@ -95,6 +96,7 @@ public class EnvoyEngineImpl implements EnvoyEngine {
   }
 
   private int runWithResolvedYAML(String configurationYAML, String logLevel) {
+    JniLibrary.registerEventTracker();
     try {
       return JniLibrary.runEngine(this.engineHandle, configurationYAML, logLevel);
     } catch (Throwable throwable) {
