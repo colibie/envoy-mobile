@@ -1,22 +1,17 @@
 #pragma once
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-
-
-
+#include "test/common/integration/quic_test_server.h"
 // NOLINT(namespace-envoy)
 
 #ifdef __cplusplus
 extern "C" { // functions
 #endif
 
-void startQuicTestServer();
+void start_server();
 
-int getServerPort();
+void shutdown_server();
 
-void shutdownQuicTestServer();
+int get_server_port();
 
 #ifdef __cplusplus
 } // functions

@@ -29,9 +29,10 @@ public final class QuicTestServer {
     TestFilesInstaller.installIfNeeded(context);
     nativeStartQuicTestServer(
         TestFilesInstaller.getInstalledPath(context), UrlUtils.getIsolatedTestRoot());
+    System.out.println("port at: " + nativeGetServerPort());
     System.out.println("QTS: quicTestServerJavaL32");
-    sBlock.block();
-    sBlock.close();
+    // sBlock.block();
+    // sBlock.close();
     sServerRunning = true;
   }
 

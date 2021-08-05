@@ -46,7 +46,7 @@ common_tls_context:
     filter_chains:
       filters:
     )EOF"){
-    std::cerr << "[quic_test_server.cc=L49] Initializing quic test server";
+    std::cerr << "[quic_test_server.cc=L49] Initializing quic test server\n";
     ON_CALL(factory_context_, api()).WillByDefault(testing::ReturnRef(*api_));
     ON_CALL(factory_context_, scope()).WillByDefault(testing::ReturnRef(stats_store_));
 
@@ -67,23 +67,25 @@ common_tls_context:
   }
 
   void QuicTestServer::startQuicTestServer() {
-    std::cerr << "Starting quic test server";
+    std::cerr << "Starting quic test server \n";
     FakeUpstreamConfig upstream_config_{time_system_};
-    upstream_config_.upstream_protocol_ = Http::CodecType::HTTP3;
-    upstream_config_.udp_fake_upstream_ = FakeUpstreamConfig::UdpConfig();
+    upstream_config_.upstream_protocol_ = Http::CodecType::HTTP1;
+//    upstream_config_.udp_fake_upstream_ = FakeUpstreamConfig::UdpConfig();
 
-    Network::TransportSocketFactoryPtr factory = createUpstreamTlsContext(factory_context_); // Network::Test::createRawBufferSocketFactory();
+    Network::TransportSocketFactoryPtr factory = Network::Test::createRawBufferSocketFactory(); // createUpstreamTlsContext(factory_context_); // Network::Test::createRawBufferSocketFactory();
+    std::cerr << "after factory\n";
 
     int port = 0;  // let the kernel pick a port that is not in use (avoids test races)
     // upstream = std::make_unique<FakeUpstream>(std::move(factory), port, version_, upstream_config_);
     aupstream = std::make_unique<AutonomousUpstream>(std::move(factory), port, version_, upstream_config_, false);
+    std::cerr << "after aupstream \n";
 
     // see what port was selected.
     std::cerr << "Upstream now listening on " << aupstream->localAddress()->ip()->port();
   }
 
   void QuicTestServer::shutdownQuicTestServer() {
-    std::cerr << "shutting down";
+    std::cerr << "shutting down\n";
     aupstream.reset();
     FAIL() << "this way blaze will give you a test log";
   }

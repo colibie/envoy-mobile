@@ -42,9 +42,21 @@ envoy_cc_test(
 )
 
 envoy_cc_test_library(
-    name = "quic_test_server",
-    srcs = ["quic_test_server.cc"],
-    hdrs = ["quic_test_server.h"],
+    name = "quic_test_server_interface_lib",
+    repository = "@envoy",
+    deps = [
+        ":quic_test_server_interface_lib_no_stamp",
+    ],
+)
+
+envoy_cc_test_library(
+    name = "quic_test_server_interface_lib_no_stamp",
+    srcs = [
+        "quic_test_server.cc",
+        "quic_test_server.h",
+        "quic_test_server_interface.cc",
+    ],
+    hdrs = ["quic_test_server_interface.h"],
     data = [
         "@envoy//test/config/integration/certs",
     ],
@@ -61,38 +73,33 @@ envoy_cc_test_library(
         "@envoy//test/test_common:network_utility_lib",
         "@envoy_api//envoy/extensions/filters/common/matcher/action/v3:pkg_cc_proto",
         "@envoy_api//envoy/extensions/transport_sockets/quic/v3:pkg_cc_proto",
-    ],
+    ] + select({
+        "@envoy//bazel:disable_signal_trace": [],
+        "//conditions:default": [
+            "@envoy//source/common/signal:sigaction_lib",
+        ],
+    }),
 )
 
-envoy_cc_library(
-    name = "envoy_main_interface_lib",
-    repository = "@envoy",
-    deps = [
-        ":engine_common_lib_stamped",
-        ":envoy_main_interface_lib_no_stamp",
-    ],
-)
-
-envoy_cc_library(
-    name = "quic_test_server_interface_lib_no_stamp",
-    srcs = [
-        "quic_test_server.cc",
-        "quic_test_server.h",
-        "quic_test_server_interface.cc",
-    ],
-    hdrs = ["quic_test_server_interface.h"],
-    repository = "@envoy",
-    deps = [
-        ":engine_common_lib",
-        "//library/common/common:lambda_logger_delegate_lib",
-        "//library/common/config:config_lib",
-        "//library/common/data:utility_lib",
-        "//library/common/event:provisional_dispatcher_lib",
-        "//library/common/http:client_lib",
-        "//library/common/http:header_utility_lib",
-        "//library/common/stats:utility_lib",
-        "//library/common/types:c_types_lib",
-        "@envoy//envoy/server:lifecycle_notifier_interface",
-        "@envoy_build_config//:extension_registry",
-    ],
-)
+#envoy_cc_test_library(
+#    name = "quic_test_server",
+#    srcs = ["quic_test_server.cc"],
+#    hdrs = ["quic_test_server.h"],
+#    data = [
+#        "@envoy//test/config/integration/certs",
+#    ],
+#    repository = "@envoy",
+#    deps = [
+#        "@envoy//source/common/quic:active_quic_listener_lib",
+#        "@envoy//source/common/quic:quic_factory_lib",
+#        "@envoy//source/common/quic:quic_stat_names_lib",
+#        "@envoy//source/common/stats:isolated_store_lib",
+#        "@envoy//test:test_pch",
+#        "@envoy//test/config:utility_lib",
+#        "@envoy//test/integration:autonomous_upstream_lib",
+#        "@envoy//test/integration:fake_upstream_lib",
+#        "@envoy//test/test_common:network_utility_lib",
+#        "@envoy_api//envoy/extensions/filters/common/matcher/action/v3:pkg_cc_proto",
+#        "@envoy_api//envoy/extensions/transport_sockets/quic/v3:pkg_cc_proto",
+#    ],
+#)
