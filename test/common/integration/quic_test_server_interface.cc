@@ -10,6 +10,9 @@ static std::shared_ptr<Envoy::QuicTestServer> quic_test_server() {
 }
 
 void start_server() {
+  // test runner setup; required to access envoy test server
+  
+  // start server
   strong_quic_test_server_ = std::make_shared<Envoy::QuicTestServer>();
   quic_test_server_ = strong_quic_test_server_;
 
@@ -33,11 +36,9 @@ void shutdown_server() {
 }
 
 int get_server_port() {
-  std::cerr << "herrrrr";
-//  std::cerr << quic_test_server();
-//  std::cerr << quic_test_server()->getServerPort();
-//  return quic_test_server()->getServerPort();
+  std::cerr << "quic_test_server_interfaceL39\n";
   if (auto e = quic_test_server()) {
+    std::cerr << "quic_test_server_interfaceL41\n";
     return e->getServerPort();
   }
   return 1; // failure

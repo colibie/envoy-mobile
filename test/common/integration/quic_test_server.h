@@ -3,6 +3,12 @@
 #include "source/common/stats/isolated_store_impl.h"
 #include "source/extensions/transport_sockets/tls/ssl_socket.h"
 
+// test_runner setups
+#include "source/common/common/logger.h"
+#include "source/common/common/logger_delegates.h"
+#include "source/exe/process_wide.h"
+#include "test/mocks/access_log/mocks.h"
+
 #include "gtest/gtest.h"
 
 #include "absl/strings/str_format.h"
@@ -13,6 +19,7 @@
 #include "test/integration/autonomous_upstream.h"
 #include "test/config/utility.h"
 #include "test/test_common/network_utility.h"
+#include "tools/cpp/runfiles/runfiles.h"
 
 namespace Envoy {
   class QuicTestServer {
@@ -26,7 +33,8 @@ namespace Envoy {
     std::unique_ptr<FakeUpstream> upstream;
     std::unique_ptr<AutonomousUpstream> aupstream;
 
-    Network::TransportSocketFactoryPtr createUpstreamTlsContext(testing::NiceMock<Server::Configuration::MockTransportSocketFactoryContext>& factory_context_);
+    void setup(int, char**);
+    Network::TransportSocketFactoryPtr createUpstreamTlsContext(testing::NiceMock<Server::Configuration::MockTransportSocketFactoryContext>&);
 
    public:
     QuicTestServer();

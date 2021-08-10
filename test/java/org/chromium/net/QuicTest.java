@@ -60,7 +60,7 @@ public class QuicTest {
     // default ECT for the current connection type. Force the ECT to "Slow-2G". Since "Slow-2G"
     // is not the default ECT for any connection type, this ensures that the pref is written to.
     JSONObject nqeParams = new JSONObject().put("force_effective_connection_type", "Slow-2G");
-
+    System.out.println("QTS: quicTestJavaL63\n");
     // TODO(mgersh): Enable connection migration once it works, see http://crbug.com/634910
     JSONObject quicParams = new JSONObject()
         .put("connection_options", "PACE,IW10,FOO,DEADBEEF")
@@ -76,13 +76,17 @@ public class QuicTest {
         .put("NetworkQualityEstimator", nqeParams);
     mBuilder.setExperimentalOptions(experimentalOptions.toString());
     mBuilder.setStoragePath(getTestStorage());
+    System.out.println("QTS: quicTestJavaL79\n");
     mBuilder.enableHttpCache(CronetEngine.Builder.HTTP_CACHE_DISK_NO_HTTP, 1000 * 1024);
     CronetTestUtil.setMockCertVerifierForTesting(
         mBuilder, QuicTestServer.createMockCertVerifier());
+    System.out.println("QTS: quicTestJavaL83\n");
   }
 
   @After
   public void tearDown() throws Exception {
+    System.out.println("QTS: quicTestJavaL89\n");
+
     QuicTestServer.shutdownQuicTestServer();
   }
 
@@ -92,9 +96,10 @@ public class QuicTest {
   @OnlyRunNativeCronet
   public void testQuicLoadUrl() throws Exception {
     ExperimentalCronetEngine cronetEngine = mBuilder.build();
+    System.out.println("QTS: quicTestJavaL95\n");
     String quicURL = QuicTestServer.getServerURL() + "/simple.txt";
     TestUrlRequestCallback callback = new TestUrlRequestCallback();
-
+    System.out.println("QTS: quicTestJavaL98\n");
     // Although the native stack races QUIC and SPDY for the first request,
     // since there is no http server running on the corresponding TCP port,
     // QUIC will always succeed with a 200 (see
