@@ -85,7 +85,7 @@ public class QuicTest {
 
   @After
   public void tearDown() throws Exception {
-    System.out.println("QTS: quicTestJavaL89\n");
+    System.out.println("QTS: quicTestJavaL88\n");
 
     QuicTestServer.shutdownQuicTestServer();
   }
@@ -95,8 +95,9 @@ public class QuicTest {
   @Feature({"Cronet"})
   @OnlyRunNativeCronet
   public void testQuicLoadUrl() throws Exception {
+    System.out.println("QTS: quicTestJavaL98\n");
     ExperimentalCronetEngine cronetEngine = mBuilder.build();
-    System.out.println("QTS: quicTestJavaL95\n");
+    System.out.println("QTS: quicTestJavaL100\n");
     String quicURL = QuicTestServer.getServerURL() + "/simple.txt";
     TestUrlRequestCallback callback = new TestUrlRequestCallback();
     System.out.println("QTS: quicTestJavaL98\n");

@@ -10,7 +10,8 @@ namespace Envoy {
     // Create a Runfiles object for runfiles lookup.
     // https://github.com/bazelbuild/bazel/blob/master/tools/cpp/runfiles/runfiles_src.h#L32
     std::string error;
-    std::unique_ptr<Runfiles> runfiles(Runfiles::Create(argv[0], &error));
+    const std::basic_string<char> argv0;
+    std::unique_ptr<Runfiles> runfiles(Runfiles::CreateForTest());
     RELEASE_ASSERT(Envoy::TestEnvironment::getOptionalEnvVar("NORUNFILES").has_value() ||
         runfiles != nullptr,
                    error);
@@ -47,12 +48,11 @@ namespace Envoy {
     Logger::Registry::getSink()->setShouldEscape(false);
     Logger::Registry::setLogLevel(options.logLevel());
     Logger::Registry::setLogFormat(options.logFormat());
-    std::cerr << options.logPath();
-
+    std::cerr << options.enableFineGrainLogging() << " fine \n";
 //    Logger::Context logging_state(options.logLevel(), options.logFormat(), lock, false,
 //                                  options.enableFineGrainLogging());
-     if(Logger::Registry::getSink()->hasLock()) {std::cerr << "true\n";};
 
+    if (Logger::Registry::getSink()->hasLock()) {std::cerr << "true \n";};
     // Allocate fake log access manager.
     testing::NiceMock<AccessLog::MockAccessLogManager> access_log_manager;
     std::unique_ptr<Logger::FileSinkDelegate> file_logger;
@@ -72,18 +72,16 @@ namespace Envoy {
     envoy::extensions::transport_sockets::tls::v3::DownstreamTlsContext tls_context;
     Extensions::TransportSockets::Tls::ContextManagerImpl context_manager_{time_system_};
     std::cerr << "quic_test_serverL50\n";
+    //TODO (colibie) fix runfilesPath error std::cerr << TestEnvironment::runfilesPath("") << " testpath\n";
     const std::string yaml = absl::StrFormat(
         R"EOF(
 common_tls_context:
   tls_certificates:
-  - certificate_chain: { filename: "%s" }
-    private_key: { filename: "%s" }
+  - certificate_chain: { filename: "/usr/local/google/home/colibie/.cache/bazel/_bazel_colibie/bdfb488ae034f37da2dcebdbd6e4d897/execroot/envoy_mobile/bazel-out/k8-fastbuild/bin/test/java/org/chromium/net/quic_test.runfiles/envoy/test/config/integration/certs/upstreamcert.pem" }
+    private_key: { filename: "/usr/local/google/home/colibie/.cache/bazel/_bazel_colibie/bdfb488ae034f37da2dcebdbd6e4d897/execroot/envoy_mobile/bazel-out/k8-fastbuild/bin/test/java/org/chromium/net/quic_test.runfiles/envoy/test/config/integration/certs/upstreamkey.pem" }
   validation_context:
-    trusted_ca: { filename: "%s" }
-)EOF",
-        TestEnvironment::runfilesPath("test/config/integration/certs/upstreamcert.pem"),
-        TestEnvironment::runfilesPath("test/config/integration/certs/upstreamkey.pem"),
-        TestEnvironment::runfilesPath("test/config/integration/certs/cacert.pem"));
+    trusted_ca: { filename: "/usr/local/google/home/colibie/.cache/bazel/_bazel_colibie/bdfb488ae034f37da2dcebdbd6e4d897/execroot/envoy_mobile/bazel-out/k8-fastbuild/bin/test/java/org/chromium/net/quic_test.runfiles/envoy/test/config/integration/certs/cacert.pem" }
+)EOF");
     std::cerr << "quic_test_serverL63\n";
     TestUtility::loadFromYaml(yaml, tls_context);
     std::cerr << "quic_test_serverL65\n";
@@ -109,7 +107,8 @@ common_tls_context:
     ON_CALL(factory_context_, api()).WillByDefault(testing::ReturnRef(*api_));
     ON_CALL(factory_context_, scope()).WillByDefault(testing::ReturnRef(stats_store_));
 
-    char param[] = "/usr/local/google/home/colibie/.cache/bazel/_bazel_colibie/bdfb488ae034f37da2dcebdbd6e4d897/execroot/envoy_mobile/external/envoy";
+    char param[] = "/usr/local/google/home/colibie/.cache/bazel/_bazel_colibie/bdfb488ae034f37da2dcebdbd6e4d897/execroot/envoy_mobile/external/envoy/";
+
     char *argv[]{param, NULL};
     setup(1, argv);
 
@@ -145,6 +144,7 @@ common_tls_context:
 
     // see what port was selected.
     std::cerr << "Upstream now listening on " << aupstream->localAddress()->ip()->port();
+    Logger::Registry::getSink()->clearLock();
   }
 
   void QuicTestServer::shutdownQuicTestServer() {
