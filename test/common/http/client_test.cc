@@ -59,6 +59,7 @@ public:
     uint32_t on_complete_calls;
     uint32_t on_error_calls;
     uint32_t on_cancel_calls;
+    uint32_t on_send_window_available_calls;
     std::string expected_status_;
     bool end_stream_with_headers_;
     std::string body_data_;
@@ -68,12 +69,12 @@ public:
     bridge_callbacks_.context = &cc_;
 
     // Set up default bridge callbacks. Indivividual tests can override.
-    bridge_callbacks_.on_complete = [](void* context) -> void* {
+    bridge_callbacks_.on_complete = [](envoy_stream_intel, void* context) -> void* {
       callbacks_called* cc = static_cast<callbacks_called*>(context);
       cc->on_complete_calls++;
       return nullptr;
     };
-    bridge_callbacks_.on_headers = [](envoy_headers c_headers, bool end_stream,
+    bridge_callbacks_.on_headers = [](envoy_headers c_headers, bool end_stream, envoy_stream_intel,
                                       void* context) -> void* {
       ResponseHeaderMapPtr response_headers = toResponseHeaders(c_headers);
       callbacks_called* cc = static_cast<callbacks_called*>(context);
@@ -82,24 +83,31 @@ public:
       cc->on_headers_calls++;
       return nullptr;
     };
-    bridge_callbacks_.on_error = [](envoy_error, void* context) -> void* {
+    bridge_callbacks_.on_error = [](envoy_error, envoy_stream_intel, void* context) -> void* {
       callbacks_called* cc = static_cast<callbacks_called*>(context);
       cc->on_error_calls++;
       return nullptr;
     };
-    bridge_callbacks_.on_data = [](envoy_data c_data, bool, void* context) -> void* {
+    bridge_callbacks_.on_data = [](envoy_data c_data, bool, envoy_stream_intel,
+                                   void* context) -> void* {
       callbacks_called* cc = static_cast<callbacks_called*>(context);
       cc->on_data_calls++;
       cc->body_data_ += Data::Utility::copyToString(c_data);
       release_envoy_data(c_data);
       return nullptr;
     };
-    bridge_callbacks_.on_cancel = [](void* context) -> void* {
+    bridge_callbacks_.on_cancel = [](envoy_stream_intel, void* context) -> void* {
       callbacks_called* cc = static_cast<callbacks_called*>(context);
       cc->on_cancel_calls++;
       return nullptr;
     };
-    bridge_callbacks_.on_trailers = [](envoy_headers c_trailers, void* context) -> void* {
+    bridge_callbacks_.on_send_window_available = [](envoy_stream_intel, void* context) -> void* {
+      callbacks_called* cc = static_cast<callbacks_called*>(context);
+      cc->on_send_window_available_calls++;
+      return nullptr;
+    };
+    bridge_callbacks_.on_trailers = [](envoy_headers c_trailers, envoy_stream_intel,
+                                       void* context) -> void* {
       ResponseHeaderMapPtr response_trailers = toResponseHeaders(c_trailers);
       EXPECT_TRUE(response_trailers.get() != nullptr);
       callbacks_called* cc = static_cast<callbacks_called*>(context);
@@ -116,8 +124,8 @@ public:
   }
 
   void createStream() {
-    // Create a stream.
     ON_CALL(dispatcher_, isThreadSafe()).WillByDefault(Return(true));
+    ON_CALL(request_decoder_, streamInfo()).WillByDefault(ReturnRef(stream_info_));
 
     // Grab the response encoder in order to dispatch responses on the stream.
     // Return the request decoder to make sure calls are dispatched to the decoder via the
@@ -138,11 +146,12 @@ public:
   }
 
   MockApiListener api_listener_;
-  MockRequestDecoder request_decoder_;
+  NiceMock<MockRequestDecoder> request_decoder_;
+  NiceMock<StreamInfo::MockStreamInfo> stream_info_;
   ResponseEncoder* response_encoder_{};
   NiceMock<Event::MockProvisionalDispatcher> dispatcher_;
   envoy_http_callbacks bridge_callbacks_;
-  callbacks_called cc_ = {0, 0, 0, 0, 0, 0, "200", true, ""};
+  callbacks_called cc_ = {0, 0, 0, 0, 0, 0, 0, "200", true, ""};
   std::atomic<envoy_network_t> preferred_network_{ENVOY_NET_GENERIC};
   uint64_t alt_cluster_ = 0;
   NiceMock<Random::MockRandomGenerator> random_;
@@ -391,7 +400,8 @@ TEST_P(ClientTest, BasicStreamHeaders) {
 TEST_P(ClientTest, BasicStreamData) {
   cc_.end_stream_with_headers_ = false;
 
-  bridge_callbacks_.on_data = [](envoy_data c_data, bool end_stream, void* context) -> void* {
+  bridge_callbacks_.on_data = [](envoy_data c_data, bool end_stream, envoy_stream_intel,
+                                 void* context) -> void* {
     EXPECT_TRUE(end_stream);
     EXPECT_EQ(Data::Utility::copyToString(c_data), "response body");
     callbacks_called* cc = static_cast<callbacks_called*>(context);
@@ -427,7 +437,8 @@ TEST_P(ClientTest, BasicStreamData) {
 }
 
 TEST_P(ClientTest, BasicStreamTrailers) {
-  bridge_callbacks_.on_trailers = [](envoy_headers c_trailers, void* context) -> void* {
+  bridge_callbacks_.on_trailers = [](envoy_headers c_trailers, envoy_stream_intel,
+                                     void* context) -> void* {
     ResponseHeaderMapPtr response_trailers = toResponseHeaders(c_trailers);
     EXPECT_EQ(response_trailers->get(LowerCaseString("x-test-trailer"))[0]->value().getStringView(),
               "test_trailer");
@@ -489,12 +500,16 @@ TEST_P(ClientTest, MultipleDataStream) {
   EXPECT_CALL(dispatcher_, popTrackedObject(_));
   EXPECT_CALL(request_decoder_, decodeData(BufferStringEqual("request body"), false));
   http_client_.sendData(stream_, c_data, false);
+  // The buffer is not full: expect an on_send_window_available call in explicit_flow_control mode.
+  EXPECT_EQ(cc_.on_send_window_available_calls, explicit_flow_control_ ? 1 : 0);
 
   // Send second request data.
   EXPECT_CALL(dispatcher_, pushTrackedObject(_));
   EXPECT_CALL(dispatcher_, popTrackedObject(_));
   EXPECT_CALL(request_decoder_, decodeData(BufferStringEqual("request body2"), true));
   http_client_.sendData(stream_, c_data2, true);
+  // The stream is done: no further on_send_window_available calls should happen.
+  EXPECT_EQ(cc_.on_send_window_available_calls, explicit_flow_control_ ? 1 : 0);
 
   // Encode response headers and data.
   EXPECT_CALL(dispatcher_, pushTrackedObject(_)).Times(3);
@@ -568,11 +583,12 @@ TEST_P(ClientTest, MultipleStreams) {
   // Start stream2.
   // Setup bridge_callbacks_ to handle the response headers.
   NiceMock<MockRequestDecoder> request_decoder2;
+  ON_CALL(request_decoder2, streamInfo()).WillByDefault(ReturnRef(stream_info_));
   ResponseEncoder* response_encoder2{};
   envoy_http_callbacks bridge_callbacks_2;
-  callbacks_called cc2 = {0, 0, 0, 0, 0, 0, "200", true, ""};
+  callbacks_called cc2 = {0, 0, 0, 0, 0, 0, 0, "200", true, ""};
   bridge_callbacks_2.context = &cc2;
-  bridge_callbacks_2.on_headers = [](envoy_headers c_headers, bool end_stream,
+  bridge_callbacks_2.on_headers = [](envoy_headers c_headers, bool end_stream, envoy_stream_intel,
                                      void* context) -> void* {
     EXPECT_TRUE(end_stream);
     ResponseHeaderMapPtr response_headers = toResponseHeaders(c_headers);
@@ -581,7 +597,7 @@ TEST_P(ClientTest, MultipleStreams) {
     *on_headers_called2 = true;
     return nullptr;
   };
-  bridge_callbacks_2.on_complete = [](void* context) -> void* {
+  bridge_callbacks_2.on_complete = [](envoy_stream_intel, void* context) -> void* {
     callbacks_called* cc = static_cast<callbacks_called*>(context);
     cc->on_complete_calls++;
     return nullptr;
@@ -684,7 +700,7 @@ TEST_P(ClientTest, EnvoyLocalReplyNon503NotAnError) {
 TEST_P(ClientTest, EnvoyResponseWithErrorCode) {
   cc_.expected_status_ = "218";
   // Override the on_error default with some custom checks.
-  bridge_callbacks_.on_error = [](envoy_error error, void* context) -> void* {
+  bridge_callbacks_.on_error = [](envoy_error error, envoy_stream_intel, void* context) -> void* {
     EXPECT_EQ(error.error_code, ENVOY_CONNECTION_FAILURE);
     EXPECT_EQ(error.attempt_count, 123);
     callbacks_called* cc = static_cast<callbacks_called*>(context);
@@ -760,7 +776,7 @@ TEST_P(ClientTest, DoubleResetStreamLocal) {
 TEST_P(ClientTest, RemoteResetAfterStreamStart) {
   cc_.end_stream_with_headers_ = false;
 
-  bridge_callbacks_.on_error = [](envoy_error error, void* context) -> void* {
+  bridge_callbacks_.on_error = [](envoy_error error, envoy_stream_intel, void* context) -> void* {
     EXPECT_EQ(error.error_code, ENVOY_STREAM_RESET);
     EXPECT_EQ(error.message.length, 0);
     EXPECT_EQ(error.attempt_count, -1);

@@ -163,9 +163,11 @@ envoy_status_t register_platform_api(const char* name, void* api);
  * Initialize an engine for handling network streams.
  * @param callbacks, the callbacks that will run the engine callbacks.
  * @param logger, optional callbacks to handle logging.
+ * @param event_tracker, an event tracker for the emission of events.
  * @return envoy_engine_t, handle to the underlying engine.
  */
-envoy_engine_t init_engine(envoy_engine_callbacks callbacks, envoy_logger logger);
+envoy_engine_t init_engine(envoy_engine_callbacks callbacks, envoy_logger logger,
+                           envoy_event_tracker event_tracker);
 
 /**
  * External entry point for library.
@@ -176,7 +178,19 @@ envoy_engine_t init_engine(envoy_engine_callbacks callbacks, envoy_logger logger
  */
 envoy_status_t run_engine(envoy_engine_t engine, const char* config, const char* log_level);
 
+/**
+ * Terminate an engine. Further interactions with a terminated engine, or streams created by a
+ * terminated engine is illegal.
+ * @param engine, handle to the engine to terminate.
+ */
 void terminate_engine(envoy_engine_t engine);
+
+/**
+ * Drain all upstream connections associated with an engine
+ * @param engine, handle to the engine to drain.
+ * @return envoy_status_t, the resulting status of the operation.
+ */
+envoy_status_t drain_connections(envoy_engine_t engine);
 
 #ifdef __cplusplus
 } // functions

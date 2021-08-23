@@ -20,9 +20,10 @@ public:
    * Constructor for a new engine instance.
    * @param callbacks, the callbacks to use for engine lifecycle monitoring.
    * @param logger, the callbacks to use for engine logging.
+   * @param event_tracker, the event tracker to use for the emission of events.
    * @param preferred_network, hook to obtain the preferred network for new streams.
    */
-  Engine(envoy_engine_callbacks callbacks, envoy_logger logger,
+  Engine(envoy_engine_callbacks callbacks, envoy_logger logger, envoy_event_tracker event_tracker,
          std::atomic<envoy_network_t>& preferred_network);
 
   /**
@@ -106,6 +107,11 @@ public:
    */
   void flushStats();
 
+  /**
+   * Drain all upstream connections associated with this Engine.
+   */
+  void drainConnections();
+
 private:
   envoy_status_t main(std::string config, std::string log_level);
 
@@ -114,6 +120,8 @@ private:
   Stats::StatNameSetPtr stat_name_set_;
   envoy_engine_callbacks callbacks_;
   envoy_logger logger_;
+  envoy_event_tracker event_tracker_;
+  Assert::ActionRegistrationPtr assert_handler_registration_;
   Thread::MutexBasicLockable mutex_;
   Thread::CondVar cv_;
   Http::ClientPtr http_client_;
