@@ -16,7 +16,7 @@ namespace Envoy {
 
     Envoy::TestEnvironment::setRunfiles(runfiles.get());
 
-    Envoy::TestEnvironment::setEnvVar("ENVOY_IP_TEST_VERSIONS", "all", 0);
+    Envoy::TestEnvironment::setEnvVar("ENVOY_IP_TEST_VERSIONS", "v4only", 0);
 
     ProcessWide process_wide;
 
@@ -35,7 +35,8 @@ namespace Envoy {
     Logger::Registry::getSink()->setShouldEscape(false);
     Logger::Registry::setLogLevel(options.logLevel());
     Logger::Registry::setLogFormat(options.logFormat());
-    std::cerr << options.enableFineGrainLogging() << " fine \n";
+
+    // TODO(colibie) this doesnt work. Why?
 //    Logger::Context logging_state(options.logLevel(), options.logFormat(), lock, false,
 //                                  options.enableFineGrainLogging());
 
@@ -110,11 +111,10 @@ common_tls_context:
     int port = 0;  // let the kernel pick a port that is not in use (avoids test races)
     // upstream = std::make_unique<FakeUpstream>(std::move(factory), port, version_, upstream_config_);
     aupstream = std::make_unique<AutonomousUpstream>(std::move(factory), port, version_, upstream_config_, false);
-    std::cerr << "after aupstream \n";
 
     // see what port was selected.
-    std::cerr << "Upstream now listening on " << aupstream->localAddress()->ip();
-    std::cerr << "\nUpstream now listening on " << aupstream->localAddress()->ip()->port();
+    std::cerr << "Upstream now listening on " << aupstream->localAddress()->asString();
+
     Logger::Registry::getSink()->clearLock();
   }
 

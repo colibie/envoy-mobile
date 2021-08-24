@@ -49,13 +49,13 @@ public final class QuicTestServer {
 
   public static String getServerURL() {
     System.out.println("QTS: quicTestServerJavaL51");
-    return "https://" + getServerHost() + ":" + getServerPort();
+    return "http://" + getServerHost() + ":" + getServerPort();
   }
 
   public static String getServerHost() {
     System.out.println("QTS: quicTestServerJavaL56");
     // return CronetTestUtil.QUIC_FAKE_HOST;
-    return "www.localhost";
+    return "[::1]";
   }
 
   public static int getServerPort() {
