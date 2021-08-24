@@ -80,7 +80,6 @@ public class QuicTest {
     mBuilder.enableHttpCache(CronetEngine.Builder.HTTP_CACHE_DISK_NO_HTTP, 1000 * 1024);
     CronetTestUtil.setMockCertVerifierForTesting(
         mBuilder, QuicTestServer.createMockCertVerifier());
-    System.out.println("QTS: quicTestJavaL83\n");
   }
 
   @After
@@ -100,7 +99,7 @@ public class QuicTest {
     System.out.println("QTS: quicTestJavaL100\n");
     String quicURL = QuicTestServer.getServerURL() + "/simple.txt";
     TestUrlRequestCallback callback = new TestUrlRequestCallback();
-    System.out.println("QTS: quicTestJavaL98\n");
+    System.out.println("QTS: quicTestJavaL103\n");
     // Although the native stack races QUIC and SPDY for the first request,
     // since there is no http server running on the corresponding TCP port,
     // QUIC will always succeed with a 200 (see
@@ -109,8 +108,9 @@ public class QuicTest {
         cronetEngine.newUrlRequestBuilder(quicURL, callback, callback.getExecutor());
     requestBuilder.build().start();
     callback.blockForDone();
-
+    System.out.println("QTS: quicTestJavaL112\n");
     assertEquals(200, callback.mResponseInfo.getHttpStatusCode());
+    System.out.println("QTS: quicTestJavaL114\n");
     String expectedContent = "This is a simple text file served by QUIC.\n";
     assertEquals(expectedContent, callback.mResponseAsString);
     assertIsQuic(callback.mResponseInfo);

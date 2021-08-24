@@ -54,7 +54,8 @@ public final class QuicTestServer {
 
   public static String getServerHost() {
     System.out.println("QTS: quicTestServerJavaL56");
-    return CronetTestUtil.QUIC_FAKE_HOST;
+    // return CronetTestUtil.QUIC_FAKE_HOST;
+    return "www.localhost";
   }
 
   public static int getServerPort() {

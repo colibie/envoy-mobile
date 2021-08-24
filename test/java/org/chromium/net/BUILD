@@ -30,6 +30,7 @@ envoy_mobile_android_test(
     srcs = [
         "QuicTest.java",
     ],
+    library_path = "library/common/jni:test/common/jni",
     native_deps = [
         "//library/common/jni:libndk_envoy_jni.so",
         "//library/common/jni:libndk_envoy_jni.jnilib",
