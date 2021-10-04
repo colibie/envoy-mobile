@@ -25,12 +25,11 @@ public final class QuicTestServer {
     if (sServerRunning) {
       throw new IllegalStateException("Quic server is already running");
     }
-    System.out.println("QTS: quicTestServerJavaL28");
+
     TestFilesInstaller.installIfNeeded(context);
-    nativeStartQuicTestServer(
-        TestFilesInstaller.getInstalledPath(context), UrlUtils.getIsolatedTestRoot());
-    System.out.println("port at: " + nativeGetServerPort());
-    System.out.println("QTS: quicTestServerJavaL32");
+    nativeStartQuicTestServer(TestFilesInstaller.getInstalledPath(context),
+                              UrlUtils.getIsolatedTestRoot());
+
     // sBlock.block();
     // sBlock.close();
     sServerRunning = true;
@@ -48,34 +47,25 @@ public final class QuicTestServer {
   }
 
   public static String getServerURL() {
-    System.out.println("QTS: quicTestServerJavaL51");
-    return "http://" + getServerHost() + ":" + getServerPort();
+    return "https://" + getServerHost() + ":" + getServerPort() + "/";
   }
 
   public static String getServerHost() {
-    System.out.println("QTS: quicTestServerJavaL56");
     // return CronetTestUtil.QUIC_FAKE_HOST;
-    return "[::1]";
+    return "127.0.0.1";
   }
 
-  public static int getServerPort() {
-    return nativeGetServerPort();
-  }
+  public static int getServerPort() { return nativeGetServerPort(); }
 
-  public static final String getServerCert() {
-    return CERT_USED;
-  }
+  public static final String getServerCert() { return CERT_USED; }
 
-  public static final String getServerCertKey() {
-    return KEY_USED;
-  }
+  public static final String getServerCertKey() { return KEY_USED; }
 
   public static long createMockCertVerifier() {
     TestFilesInstaller.installIfNeeded(ContextUtils.getApplicationContext());
     return MockCertVerifier.createMockCertVerifier(CERTS_USED, true);
   }
 
-  @CalledByNative
   private static void onServerStarted() {
     Log.i(TAG, "Quic server started.");
     sBlock.open();
