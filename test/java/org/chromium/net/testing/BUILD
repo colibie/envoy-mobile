@@ -17,6 +17,8 @@ android_library(
         "CronetTestUtil.java",
         "FailurePhase.java",
         "Feature.java",
+        "FileUtils.java",
+        "MetricsTestUtil.java",
         "MockCertVerifier.java",
         "MockUrlRequestJobFactory.java",
         "NativeTestServer.java",

@@ -24,4 +24,6 @@ public final class TestFilesInstaller {
   public static String getInstalledPath(Context context) {
     return UrlUtils.getIsolatedTestRoot() + "/" + TEST_FILE_ASSET_PATH;
   }
+  // prevent instantiation
+  private TestFilesInstaller() {}
 }

@@ -103,14 +103,14 @@ static inline NSString *to_ios_string(envoy_data data) {
 static inline EnvoyEvent *to_ios_map(envoy_map map) {
   NSMutableDictionary *newMap = [NSMutableDictionary new];
   for (envoy_map_size_t i = 0; i < map.length; i++) {
-    envoy_map_entry header = map.entries[i];
-    NSString *headerKey = [[NSString alloc] initWithBytes:header.key.bytes
-                                                   length:header.key.length
-                                                 encoding:NSUTF8StringEncoding];
-    NSString *headerValue = [[NSString alloc] initWithBytes:header.value.bytes
-                                                     length:header.value.length
-                                                   encoding:NSUTF8StringEncoding];
-    newMap[headerKey] = headerValue;
+    envoy_map_entry entry = map.entries[i];
+    NSString *entryKey = [[NSString alloc] initWithBytes:entry.key.bytes
+                                                  length:entry.key.length
+                                                encoding:NSUTF8StringEncoding];
+    NSString *entryValue = [[NSString alloc] initWithBytes:entry.value.bytes
+                                                    length:entry.value.length
+                                                  encoding:NSUTF8StringEncoding];
+    newMap[entryKey] = entryValue;
   }
 
   release_envoy_map(map);
@@ -127,27 +127,16 @@ static inline EnvoyHeaders *to_ios_headers(envoy_headers headers) {
     NSString *headerValue = [[NSString alloc] initWithBytes:header.value.bytes
                                                      length:header.value.length
                                                    encoding:NSUTF8StringEncoding];
-    // Ensure list is present in dictionary value
-    NSMutableArray *headerValueList = headerDict[headerKey];
-    if (headerValueList == nil) {
-      headerValueList = [NSMutableArray new];
-      headerDict[headerKey] = headerValueList;
-    }
-
-    // These headers may contain commas in single values, in contravention of the RFC.
-    if ([headerKey caseInsensitiveCompare:@"cookie"] == NSOrderedSame ||
-        [headerKey caseInsensitiveCompare:@"proxy-authenticate"] == NSOrderedSame ||
-        [headerKey caseInsensitiveCompare:@"set-cookie"] == NSOrderedSame ||
-        [headerKey caseInsensitiveCompare:@"www-authenticate"] == NSOrderedSame) {
-      [headerValueList addObject:headerValue];
-    } else {
-      // Add trimmed, comma-separated values as individual members of the list.
-      NSArray *newValueList = [headerValue componentsSeparatedByString:@","];
-      for (NSString *value in newValueList) {
-        NSString *trimmedValue =
-            [value stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
-        [headerValueList addObject:trimmedValue];
+    // TODO: https://github.com/envoyproxy/envoy-mobile/issues/1825. All header values passed in
+    // here should be valid.
+    if (headerKey != nil && headerValue != nil) {
+      // Ensure list is present in dictionary value
+      NSMutableArray *headerValueList = headerDict[headerKey];
+      if (headerValueList == nil) {
+        headerValueList = [NSMutableArray new];
+        headerDict[headerKey] = headerValueList;
       }
+      [headerValueList addObject:headerValue];
     }
   }
   // The C envoy_headers struct can be released now because the headers have been copied.
