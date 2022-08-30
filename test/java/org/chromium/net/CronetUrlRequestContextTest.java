@@ -141,7 +141,8 @@ public class CronetUrlRequestContextTest {
     ExperimentalCronetEngine.Builder cronetEngineBuilder =
         new ExperimentalCronetEngine.Builder(getContext());
     if (mTestRule.testingJavaImpl()) {
-      cronetEngineBuilder = mTestRule.createJavaEngineBuilder();
+      cronetEngineBuilder = CronetTestRule.createJavaEngineBuilder(getContext());
+      ;
     }
     cronetEngineBuilder.setUserAgent(userAgentValue);
     final CronetEngine cronetEngine = cronetEngineBuilder.build();

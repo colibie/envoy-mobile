@@ -2044,12 +2044,13 @@ public class CronetUrlRequestTest {
   @SmallTest
   @Feature({"Cronet"})
   @OnlyRunNativeCronet // Java impl doesn't support MockUrlRequestJobFactory
-  @Ignore("https://github.com/envoyproxy/envoy-mobile/issues/1549")
+  // @Ignore("https://github.com/envoyproxy/envoy-mobile/issues/1549")
   public void testErrorCodes() throws Exception {
-    checkSpecificErrorCode(-105, NetworkException.ERROR_HOSTNAME_NOT_RESOLVED, "NAME_NOT_RESOLVED",
-                           false);
-    checkSpecificErrorCode(-106, NetworkException.ERROR_INTERNET_DISCONNECTED,
-                           "INTERNET_DISCONNECTED", false);
+    // checkSpecificErrorCode(-105, NetworkException.ERROR_HOSTNAME_NOT_RESOLVED,
+    // "NAME_NOT_RESOLVED",
+    //                        false);
+    // checkSpecificErrorCode(-106, NetworkException.ERROR_INTERNET_DISCONNECTED,
+    //                        "INTERNET_DISCONNECTED", false);
     checkSpecificErrorCode(-21, NetworkException.ERROR_NETWORK_CHANGED, "NETWORK_CHANGED", true);
     checkSpecificErrorCode(-100, NetworkException.ERROR_CONNECTION_CLOSED, "CONNECTION_CLOSED",
                            true);
@@ -2191,8 +2192,8 @@ public class CronetUrlRequestTest {
 
   private void checkSpecificErrorCode(int netError, int errorCode, String name,
                                       boolean immediatelyRetryable) throws Exception {
-    TestUrlRequestCallback callback = startAndWaitForComplete(
-        MockUrlRequestJobFactory.getMockUrlWithFailure(FailurePhase.START, netError));
+    TestUrlRequestCallback callback =
+        startAndWaitForComplete("http://mock.failed.request/error?start=" + netError);
     assertNull(callback.mResponseInfo);
     assertNotNull(callback.mError);
     assertEquals(netError, ((NetworkException)callback.mError).getCronetInternalErrorCode());
