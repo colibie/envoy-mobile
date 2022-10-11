@@ -40,6 +40,7 @@ public class AndroidNetworkMonitor extends BroadcastReceiver {
   private ConnectivityManager connectivityManager;
   private NetworkCallback networkCallback;
   private NetworkRequest networkRequest;
+  private boolean isOnline;
 
   public static void load(Context context, EnvoyEngine envoyEngine) {
     if (instance != null) {
@@ -109,6 +110,15 @@ public class AndroidNetworkMonitor extends BroadcastReceiver {
     handleNetworkChange();
   }
 
+  public boolean isOnline() {
+    return isOnline;
+  }
+
+  @VisibleForTesting
+  public void setConnectivityManagerForTesting(ConnectivityManager testConnectivityManager) {
+    connectivityManager = testConnectivityManager;
+  }
+
   private void handleNetworkChange() {
     NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
     int networkType = networkInfo == null ? -1 : networkInfo.getType();
@@ -116,6 +126,7 @@ public class AndroidNetworkMonitor extends BroadcastReceiver {
       return;
     }
     previousNetworkType = networkType;
+    isOnline = networkType == -1 ? false : true;
 
     switch (networkType) {
     case ConnectivityManager.TYPE_MOBILE:
