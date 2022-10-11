@@ -16,6 +16,7 @@ import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
 import android.net.NetworkRequest;
 import android.os.Build;
+import androidx.annotation.VisibleForTesting;
 import androidx.core.content.ContextCompat;
 
 import java.util.Collections;
@@ -40,7 +41,7 @@ public class AndroidNetworkMonitor extends BroadcastReceiver {
   private ConnectivityManager connectivityManager;
   private NetworkCallback networkCallback;
   private NetworkRequest networkRequest;
-  private boolean isOnline;
+  private boolean isOnline = false;
 
   public static void load(Context context, EnvoyEngine envoyEngine) {
     if (instance != null) {
@@ -105,14 +106,14 @@ public class AndroidNetworkMonitor extends BroadcastReceiver {
     }
   }
 
+  public static AndroidNetworkMonitor getInstance() { return instance; }
+
   @Override
   public void onReceive(Context context, Intent intent) {
     handleNetworkChange();
   }
 
-  public boolean isOnline() {
-    return isOnline;
-  }
+  public boolean isOnline() { return isOnline; }
 
   @VisibleForTesting
   public void setConnectivityManagerForTesting(ConnectivityManager testConnectivityManager) {

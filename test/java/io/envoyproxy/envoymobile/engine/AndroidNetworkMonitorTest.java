@@ -1,30 +1,63 @@
 package io.envoyproxy.envoymobile.engine;
 
-class AndroidNetworkMonitorTest {
+import static org.robolectric.Shadows.shadowOf;
 
-  private AndroidNetworkMonitor;
-  private ShadowConnectivityManager;
+import android.content.Intent;
+import android.content.Context;
+import android.Manifest;
+import android.net.ConnectivityManager;
+import androidx.test.filters.MediumTest;
+import androidx.test.platform.app.InstrumentationRegistry;
+import androidx.test.rule.GrantPermissionRule;
+import androidx.test.annotation.UiThreadTest;
+import io.envoyproxy.envoymobile.MockEnvoyEngine;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.robolectric.RobolectricTestRunner;
+import org.robolectric.shadows.ShadowConnectivityManager;
+
+/**
+ * Tests functionality of AndroidNetworkMonitor
+ */
+@RunWith(RobolectricTestRunner.class)
+public class AndroidNetworkMonitorTest {
+
+  @Rule
+  public GrantPermissionRule mRuntimePermissionRule =
+      GrantPermissionRule.grant(Manifest.permission.ACCESS_NETWORK_STATE);
+
+  private AndroidNetworkMonitor androidNetworkMonitor;
+  private ShadowConnectivityManager connectivityManager;
+  private Context context;
 
   @Before
-  public setUp() {
-    androidNetworkMonitor = AndroidNetworkMonitor.load(); //mReceiver.register();
-    mConnectivityManger = new ShadowConnectivityManager();
-    androidNetworkMonitor.setConnectivityManagerForTesting(mConnectivityManager);
+  public void setUp() {
+    context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+    AndroidNetworkMonitor.load(context, new MockEnvoyEngine());
+    androidNetworkMonitor = AndroidNetworkMonitor.getInstance();
+    connectivityManager =
+        shadowOf((ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE));
   }
+
   /**
    * Tests that isOnline() returns the correct result.
    */
   @Test
-  @UiThreadTest
   @MediumTest
-  public void testNetworkChangeNotifierIsOnline() {
+  @UiThreadTest
+  public void testAndroidNetworkMonitorIsOnline() {
     Intent intent = new Intent(ConnectivityManager.CONNECTIVITY_ACTION);
-    // For any connection type it should return true.
-    for (int i = ConnectivityManager.TYPE_MOBILE; i < ConnectivityManager.TYPE_VPN; i++) {
-      Assert.assertTrue(NetworkChangeNotifier.isOnline());
-    }
-    mConnectivityManager.setDefaultNetworkActive(false);
-    mReceiver.onReceive(InstrumentationRegistry.getTargetContext(), intent);
-    Assert.assertFalse(NetworkChangeNotifier.isOnline());
+    // Set up network change
+    androidNetworkMonitor.onReceive(context, intent);
+    Assert.assertTrue(androidNetworkMonitor.isOnline());
+
+    // Simulate a no network scenerio
+    connectivityManager.setActiveNetworkInfo(null);
+    androidNetworkMonitor.onReceive(context, intent);
+    Assert.assertFalse(androidNetworkMonitor.isOnline());
   }
 }
