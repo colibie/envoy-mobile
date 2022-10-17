@@ -2,10 +2,11 @@ package io.envoyproxy.envoymobile.engine;
 
 import static org.robolectric.Shadows.shadowOf;
 
-import android.content.Intent;
 import android.content.Context;
+import android.content.Intent;
 import android.Manifest;
 import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import androidx.test.filters.MediumTest;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.rule.GrantPermissionRule;
@@ -39,8 +40,7 @@ public class AndroidNetworkMonitorTest {
     context = InstrumentationRegistry.getInstrumentation().getTargetContext();
     AndroidNetworkMonitor.load(context, new MockEnvoyEngine());
     androidNetworkMonitor = AndroidNetworkMonitor.getInstance();
-    connectivityManager =
-        shadowOf((ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE));
+    connectivityManager = shadowOf(androidNetworkMonitor.getConnectivityManager());
   }
 
   /**
@@ -55,9 +55,14 @@ public class AndroidNetworkMonitorTest {
     androidNetworkMonitor.onReceive(context, intent);
     Assert.assertTrue(androidNetworkMonitor.isOnline());
 
-    // Simulate a no network scenerio
+    // Save old networkInfo and simulate a no network scenerio
+    NetworkInfo networkInfo = androidNetworkMonitor.getConnectivityManager().getActiveNetworkInfo();
     connectivityManager.setActiveNetworkInfo(null);
     androidNetworkMonitor.onReceive(context, intent);
     Assert.assertFalse(androidNetworkMonitor.isOnline());
+
+    // Bring back online since the AndroidNetworkMonitor class is a singleton
+    connectivityManager.setActiveNetworkInfo(networkInfo);
+    androidNetworkMonitor.onReceive(context, intent);
   }
 }

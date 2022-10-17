@@ -10,9 +10,12 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.robolectric.Shadows.shadowOf;
 
+import androidx.test.annotation.UiThreadTest;
+import android.content.Context;
 import android.content.Intent;
 import android.Manifest;
 import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Build;
 import android.os.ConditionVariable;
 import android.os.StrictMode;
@@ -2090,17 +2093,25 @@ public class CronetUrlRequestTest {
   @Feature({"Cronet"})
   @OnlyRunNativeCronet // Java impl doesn't support MockUrlRequestJobFactory
   public void testInternetDisconnectedError() throws Exception {
+    AndroidNetworkMonitor androidNetworkMonitor = AndroidNetworkMonitor.getInstance();
+    Intent intent = new Intent(ConnectivityManager.CONNECTIVITY_ACTION);
+    // save old networkInfo before overriding
+    NetworkInfo networkInfo = androidNetworkMonitor.getConnectivityManager().getActiveNetworkInfo();
+
     // simulate no network
-    ShadowConnectivityManager connectivityManager = shadowOf(
-        (ConnectivityManager)getContext().getSystemService(getContext().CONNECTIVITY_SERVICE));
+    ShadowConnectivityManager connectivityManager =
+        shadowOf(androidNetworkMonitor.getConnectivityManager());
     connectivityManager.setActiveNetworkInfo(null);
-    AndroidNetworkMonitor.getInstance().onReceive(
-        getContext(), new Intent(ConnectivityManager.CONNECTIVITY_ACTION));
+    androidNetworkMonitor.onReceive(getContext(), intent);
 
     // send request and confirm errorcode
     checkSpecificErrorCode(
         EnvoyMobileError.DNS_RESOLUTION_FAILED, NetError.ERR_INTERNET_DISCONNECTED,
         NetworkException.ERROR_INTERNET_DISCONNECTED, "INTERNET_DISCONNECTED", false);
+
+    // bring back online since the AndroidNetworkMonitor class is a singleton
+    connectivityManager.setActiveNetworkInfo(networkInfo);
+    androidNetworkMonitor.onReceive(getContext(), intent);
   }
 
   /*

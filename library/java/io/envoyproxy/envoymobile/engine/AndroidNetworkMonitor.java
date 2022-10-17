@@ -41,7 +41,6 @@ public class AndroidNetworkMonitor extends BroadcastReceiver {
   private ConnectivityManager connectivityManager;
   private NetworkCallback networkCallback;
   private NetworkRequest networkRequest;
-  private boolean isOnline = false;
 
   public static void load(Context context, EnvoyEngine envoyEngine) {
     if (instance != null) {
@@ -106,19 +105,19 @@ public class AndroidNetworkMonitor extends BroadcastReceiver {
     }
   }
 
-  public static AndroidNetworkMonitor getInstance() { return instance; }
+  /** @returns The singleton instance of {@link AndroidNetworkMonitor}. */
+  public static AndroidNetworkMonitor getInstance() {
+    assert instance != null;
+    return instance;
+  }
 
   @Override
   public void onReceive(Context context, Intent intent) {
     handleNetworkChange();
   }
 
-  public boolean isOnline() { return isOnline; }
-
-  @VisibleForTesting
-  public void setConnectivityManagerForTesting(ConnectivityManager testConnectivityManager) {
-    connectivityManager = testConnectivityManager;
-  }
+  /** @returns True if there is connectivity */
+  public boolean isOnline() { return previousNetworkType != -1; }
 
   private void handleNetworkChange() {
     NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
@@ -127,7 +126,6 @@ public class AndroidNetworkMonitor extends BroadcastReceiver {
       return;
     }
     previousNetworkType = networkType;
-    isOnline = networkType == -1 ? false : true;
 
     switch (networkType) {
     case ConnectivityManager.TYPE_MOBILE:
@@ -139,5 +137,11 @@ public class AndroidNetworkMonitor extends BroadcastReceiver {
     default:
       envoyEngine.setPreferredNetwork(EnvoyNetworkType.ENVOY_NETWORK_TYPE_GENERIC);
     }
+  }
+
+  /** Expose connectivityManager only for testing */
+  @VisibleForTesting
+  public ConnectivityManager getConnectivityManager() {
+    return connectivityManager;
   }
 }
